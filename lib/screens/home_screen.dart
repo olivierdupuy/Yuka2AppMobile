@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 import '../providers/auth_provider.dart';
 import '../providers/product_provider.dart';
 import '../services/tracking_service.dart';
@@ -51,30 +53,36 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 24,
+              offset: const Offset(0, -6),
             ),
           ],
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _NavItem(icon: Icons.home_rounded, label: 'Accueil', isActive: _currentIndex == 0, onTap: () => setState(() => _currentIndex = 0)),
                 _NavItem(icon: Icons.search_rounded, label: 'Recherche', isActive: _currentIndex == 1, onTap: () => setState(() => _currentIndex = 1)),
                 GestureDetector(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanScreen())),
+                  onTap: () {
+                    HapticFeedback.mediumImpact();
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanScreen()));
+                  },
                   child: Container(
-                    width: 56, height: 56,
+                    width: 60, height: 60,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(colors: [AppTheme.primary, AppTheme.primaryLight], begin: Alignment.topLeft, end: Alignment.bottomRight),
                       shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: AppTheme.primary.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4))],
+                      boxShadow: [
+                        BoxShadow(color: AppTheme.primary.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6)),
+                      ],
                     ),
                     child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 28),
                   ),
@@ -100,16 +108,28 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 60,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 64,
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? AppTheme.primary.withValues(alpha: 0.08) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: isActive ? AppTheme.primary : AppTheme.textSecondary, size: 24),
-            const SizedBox(height: 2),
-            Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: isActive ? FontWeight.w600 : FontWeight.w400, color: isActive ? AppTheme.primary : AppTheme.textSecondary)),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(icon, color: isActive ? AppTheme.primary : AppTheme.textSecondary, size: isActive ? 26 : 24),
+            ),
+            const SizedBox(height: 3),
+            Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: isActive ? FontWeight.w700 : FontWeight.w400, color: isActive ? AppTheme.primary : AppTheme.textSecondary)),
           ],
         ),
       ),
@@ -133,7 +153,6 @@ class _HomeContent extends StatelessWidget {
     final productProvider = context.watch<ProductProvider>();
     final products = productProvider.products;
 
-    // Trier par healthScore pour les "meilleurs" et "à éviter"
     final bestProducts = [...products]..sort((a, b) => (b.healthScore ?? 0).compareTo(a.healthScore ?? 0));
     final worstProducts = [...products]..sort((a, b) => (a.healthScore ?? 0).compareTo(b.healthScore ?? 0));
 
@@ -144,7 +163,7 @@ class _HomeContent extends StatelessWidget {
           // ==================== HEADER ====================
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -161,61 +180,74 @@ class _HomeContent extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.2),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 6),
                             Text(
                               'Mangez mieux, vivez mieux',
-                              style: GoogleFonts.inter(fontSize: 15, color: AppTheme.textSecondary),
+                              style: GoogleFonts.inter(fontSize: 15, color: AppTheme.textSecondary, fontWeight: FontWeight.w400),
                             ).animate().fadeIn(duration: 400.ms, delay: 100.ms),
                           ],
                         ),
                       ),
                       const SizedBox(width: 12),
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [AppTheme.primary.withValues(alpha: 0.15), AppTheme.primaryLight.withValues(alpha: 0.1)],
+                            colors: [AppTheme.primary.withValues(alpha: 0.12), AppTheme.primaryLight.withValues(alpha: 0.08)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: AppTheme.primary.withValues(alpha: 0.1)),
                         ),
                         child: const Icon(Icons.eco_rounded, color: AppTheme.primary, size: 28),
                       ).animate().fadeIn(duration: 400.ms).scale(begin: const Offset(0.8, 0.8)),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 22),
 
                   // ==================== SEARCH BAR ====================
                   GestureDetector(
                     onTap: () {
+                      HapticFeedback.selectionClick();
                       final homeState = context.findAncestorStateOfType<_HomeScreenState>();
                       homeState?._goToSearch();
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 2))],
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.withValues(alpha: 0.08)),
+                        boxShadow: AppTheme.cardShadow,
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.search_rounded, color: AppTheme.textSecondary.withValues(alpha: 0.5), size: 22),
-                          const SizedBox(width: 12),
-                          Text('Rechercher un produit...', style: GoogleFonts.inter(fontSize: 15, color: AppTheme.textSecondary.withValues(alpha: 0.5))),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.search_rounded, color: AppTheme.primary, size: 20),
+                          ),
+                          const SizedBox(width: 14),
+                          Text('Rechercher un produit...', style: GoogleFonts.inter(fontSize: 15, color: AppTheme.textSecondary.withValues(alpha: 0.6))),
                         ],
                       ),
                     ),
                   ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.05),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 22),
 
                   // ==================== SCAN CTA ====================
                   GestureDetector(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanScreen())),
+                    onTap: () {
+                      HapticFeedback.mediumImpact();
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanScreen()));
+                    },
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(22),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF43A047)],
@@ -223,7 +255,7 @@ class _HomeContent extends StatelessWidget {
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(24),
-                        boxShadow: [BoxShadow(color: AppTheme.primary.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))],
+                        boxShadow: AppTheme.elevatedShadow(AppTheme.primary),
                       ),
                       child: Row(
                         children: [
@@ -232,45 +264,49 @@ class _HomeContent extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('Scanner un produit', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
-                                const SizedBox(height: 6),
+                                const SizedBox(height: 8),
                                 Text('Scannez le code-barres pour\ndécouvrir sa qualité nutritionnelle',
-                                  style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.85), height: 1.4)),
+                                  style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.85), height: 1.5)),
                               ],
                             ),
                           ),
                           const SizedBox(width: 12),
                           Container(
                             padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                            ),
                             child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 32),
                           ),
                         ],
                       ),
                     ),
                   ).animate().fadeIn(duration: 500.ms, delay: 200.ms).slideY(begin: 0.08),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 26),
 
                   // ==================== NUTRISCORE QUICK FILTER ====================
                   Text('NutriScore', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary))
                       .animate().fadeIn(delay: 250.ms),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   Row(
                     children: ['A', 'B', 'C', 'D', 'E'].map((score) {
                       final color = AppTheme.nutriScoreColor(score);
                       final count = products.where((p) => p.nutriScore?.toUpperCase() == score).length;
                       return Expanded(
                         child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+                            color: color.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: color.withValues(alpha: 0.25), width: 1.5),
                           ),
                           child: Column(
                             children: [
                               Text(score, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w900, color: color)),
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 4),
                               Text('$count', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: color.withValues(alpha: 0.7))),
                             ],
                           ),
@@ -287,29 +323,39 @@ class _HomeContent extends StatelessWidget {
           if (bestProducts.isNotEmpty) ...[
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 14),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(color: AppTheme.nutriA.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(colors: [AppTheme.nutriA.withValues(alpha: 0.15), AppTheme.nutriA.withValues(alpha: 0.05)]),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           child: const Icon(Icons.star_rounded, color: AppTheme.nutriA, size: 18),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         Text('Les meilleurs choix', style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                       ],
                     ),
-                    Text('Score sain', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.nutriA.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text('Score sain', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.nutriA)),
+                    ),
                   ],
                 ).animate().fadeIn(delay: 350.ms),
               ),
             ),
             SliverToBoxAdapter(
               child: SizedBox(
-                height: 195,
+                height: 200,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -318,15 +364,19 @@ class _HomeContent extends StatelessWidget {
                     final product = bestProducts[index];
                     final scoreColor = AppTheme.healthScoreColor(product.healthScore);
                     return GestureDetector(
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: product.id))),
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: product.id)));
+                      },
                       child: Container(
-                        width: 155,
+                        width: 160,
                         margin: const EdgeInsets.only(right: 12),
-                        padding: const EdgeInsets.all(14),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 12, offset: const Offset(0, 4))],
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(color: Colors.grey.withValues(alpha: 0.06)),
+                          boxShadow: AppTheme.cardShadow,
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,7 +397,7 @@ class _HomeContent extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [scoreColor, scoreColor.withValues(alpha: 0.7)]),
-                                    boxShadow: [BoxShadow(color: scoreColor.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3))],
+                                    boxShadow: [BoxShadow(color: scoreColor.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 3))],
                                   ),
                                   alignment: Alignment.center,
                                   child: Text('${product.healthScore ?? '?'}', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white)),
@@ -360,10 +410,10 @@ class _HomeContent extends StatelessWidget {
                             Text(product.brand ?? '', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
                             const SizedBox(height: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: AppTheme.nutriScoreColor(product.nutriScore).withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(6),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 'Nutri-Score ${product.nutriScore ?? '?'}',
@@ -384,15 +434,18 @@ class _HomeContent extends StatelessWidget {
           if (worstProducts.isNotEmpty && worstProducts.first.healthScore != null && worstProducts.first.healthScore! < 50) ...[
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 14),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(color: AppTheme.nutriE.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: [AppTheme.nutriE.withValues(alpha: 0.15), AppTheme.nutriE.withValues(alpha: 0.05)]),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: const Icon(Icons.warning_amber_rounded, color: AppTheme.nutriE, size: 18),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Text('A consommer avec modération', style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                   ],
                 ).animate().fadeIn(delay: 500.ms),
@@ -400,7 +453,7 @@ class _HomeContent extends StatelessWidget {
             ),
             SliverToBoxAdapter(
               child: SizedBox(
-                height: 100,
+                height: 110,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -409,22 +462,28 @@ class _HomeContent extends StatelessWidget {
                     final product = worstProducts.where((p) => (p.healthScore ?? 100) < 50).toList()[index];
                     final scoreColor = AppTheme.healthScoreColor(product.healthScore);
                     return GestureDetector(
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: product.id))),
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: product.id)));
+                      },
                       child: Container(
-                        width: 220,
+                        width: 240,
                         margin: const EdgeInsets.only(right: 12),
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: scoreColor.withValues(alpha: 0.2)),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2))],
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: scoreColor.withValues(alpha: 0.15)),
+                          boxShadow: AppTheme.cardShadow,
                         ),
                         child: Row(
                           children: [
                             Container(
-                              width: 48, height: 48,
-                              decoration: BoxDecoration(color: scoreColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                              width: 50, height: 50,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(colors: [scoreColor.withValues(alpha: 0.15), scoreColor.withValues(alpha: 0.05)]),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
                               child: Icon(_getCategoryIcon(product.categories), color: scoreColor, size: 24),
                             ),
                             const SizedBox(width: 12),
@@ -434,20 +493,20 @@ class _HomeContent extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(product.name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                  const SizedBox(height: 2),
+                                  const SizedBox(height: 3),
                                   Text(product.brand ?? '', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary), maxLines: 1),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 6),
                                   Row(
                                     children: [
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(color: scoreColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(color: scoreColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
                                         child: Text('${product.healthScore}/100', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: scoreColor)),
                                       ),
                                       const SizedBox(width: 6),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(color: AppTheme.nutriScoreColor(product.nutriScore).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(4)),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(color: AppTheme.nutriScoreColor(product.nutriScore).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
                                         child: Text(product.nutriScore ?? '?', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.nutriScoreColor(product.nutriScore))),
                                       ),
                                     ],
@@ -468,40 +527,68 @@ class _HomeContent extends StatelessWidget {
           // ==================== TOUS LES PRODUITS ====================
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+              padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(color: AppTheme.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: [AppTheme.accent.withValues(alpha: 0.15), AppTheme.accent.withValues(alpha: 0.05)]),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: const Icon(Icons.grid_view_rounded, color: AppTheme.accent, size: 18),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Text('Tous les produits', style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                     ],
                   ),
-                  Text('${products.length} produits', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accent.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text('${products.length} produits', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.accent)),
+                  ),
                 ],
               ).animate().fadeIn(delay: 600.ms),
             ),
           ),
 
           if (productProvider.isLoading)
-            const SliverFillRemaining(child: Center(child: CircularProgressIndicator(color: AppTheme.primary)))
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: List.generate(4, (index) => _ShimmerCard(index: index)),
+                ),
+              ),
+            )
           else if (products.isEmpty)
             SliverFillRemaining(
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey[300]),
-                    const SizedBox(height: 16),
-                    Text('Aucun produit trouvé', style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 16)),
+                    Container(
+                      padding: const EdgeInsets.all(28),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppTheme.primary.withValues(alpha: 0.08), AppTheme.primaryLight.withValues(alpha: 0.04)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.qr_code_scanner_rounded, size: 56, color: AppTheme.primary.withValues(alpha: 0.4)),
+                    ),
+                    const SizedBox(height: 20),
+                    Text('Aucun produit trouvé', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
                     const SizedBox(height: 8),
-                    Text('Scannez votre premier produit !', style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 13)),
+                    Text('Scannez votre premier produit !', style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 14)),
                   ],
                 ),
               ),
@@ -535,5 +622,28 @@ class _HomeContent extends StatelessWidget {
     if (cat.contains('conserve')) return Icons.inventory_2_rounded;
     if (cat.contains('tartiner')) return Icons.brunch_dining_rounded;
     return Icons.restaurant_rounded;
+  }
+}
+
+class _ShimmerCard extends StatelessWidget {
+  final int index;
+  const _ShimmerCard({required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Shimmer.fromColors(
+        baseColor: Colors.grey.shade200,
+        highlightColor: Colors.grey.shade50,
+        child: Container(
+          height: 90,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_auth/local_auth.dart';
@@ -56,7 +57,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         _biometricAvailable = canCheck && isSupported;
         _biometricEnabled = enabled && (hasBioToken || hasToken);
       });
-      // Auto-lancer la biométrie si activée et en mode connexion
       if (_biometricEnabled && !_isRegister) {
         _authenticateWithBiometric();
       }
@@ -72,7 +72,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       );
       if (authenticated && mounted) {
         final auth = context.read<AuthProvider>();
-        // Essayer d'abord le refresh normal, sinon le refresh biométrique
         var refreshed = await auth.api.tryRefreshToken();
         if (!refreshed) {
           refreshed = await auth.api.tryBiometricRefresh();
@@ -84,8 +83,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Session expirée, veuillez vous reconnecter avec vos identifiants.', style: GoogleFonts.inter()),
             backgroundColor: AppTheme.nutriD,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ));
         }
       }
@@ -141,6 +138,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    HapticFeedback.lightImpact();
     final auth = context.read<AuthProvider>();
 
     if (_isForgotPassword) {
@@ -149,11 +147,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.',
-                style: GoogleFonts.inter()),
+            content: Text('Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.', style: GoogleFonts.inter()),
             backgroundColor: AppTheme.nutriA,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
         setState(() => _isForgotPassword = false);
@@ -189,8 +184,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         SnackBar(
           content: Text(error ?? 'Une erreur est survenue', style: GoogleFonts.inter()),
           backgroundColor: AppTheme.nutriE,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     }
@@ -201,375 +194,375 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 10),
-                // Back button
-                GestureDetector(
-                  onTap: () {
-                    if (_isForgotPassword) {
-                      setState(() => _isForgotPassword = false);
-                    } else {
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surface,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.arrow_back_rounded, color: AppTheme.textPrimary),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Logo
-                Center(
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppTheme.primary, AppTheme.primaryLight],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.primary.withValues(alpha: 0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      _isForgotPassword ? Icons.lock_reset_rounded : Icons.eco_rounded,
-                      size: 40,
-                      color: Colors.white,
-                    ),
-                  ),
-                ).animate().scale(begin: const Offset(0.5, 0.5), duration: 500.ms, curve: Curves.elasticOut),
-                const SizedBox(height: 24),
-
-                // Title
-                Center(
-                  child: Text(
-                    _isForgotPassword
-                        ? 'Mot de passe oublié'
-                        : _isRegister
-                            ? 'Créer un compte'
-                            : 'Connexion',
-                    style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
-                  ),
-                ).animate().fadeIn(delay: 200.ms),
-                const SizedBox(height: 8),
-                Center(
-                  child: Text(
-                    _isForgotPassword
-                        ? 'Entrez votre email pour réinitialiser'
-                        : _isRegister
-                            ? 'Rejoignez la communauté Yuka2'
-                            : 'Accédez à votre espace personnel',
-                    style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary),
-                  ),
-                ).animate().fadeIn(delay: 300.ms),
-                const SizedBox(height: 32),
-
-                // Forgot password - just email
-                if (_isForgotPassword) ...[
-                  _buildLabel('Email'),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      hintText: 'votre@email.com',
-                      prefixIcon: Icon(Icons.email_outlined, color: AppTheme.primary),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Champ requis';
-                      if (!v.contains('@')) return 'Email invalide';
-                      return null;
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: const Alignment(0, -0.3),
+            colors: [
+              AppTheme.primary.withValues(alpha: 0.06),
+              AppTheme.surface,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 10),
+                  // Back button
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      if (_isForgotPassword) {
+                        setState(() => _isForgotPassword = false);
+                      } else {
+                        Navigator.pop(context);
+                      }
                     },
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: AppTheme.softShadow,
+                      ),
+                      child: const Icon(Icons.arrow_back_rounded, color: AppTheme.textPrimary, size: 20),
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                ],
+                  const SizedBox(height: 28),
 
-                // Register fields
-                if (_isRegister && !_isForgotPassword) ...[
-                  // First name / Last name row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildLabel('Prénom'),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _firstNameController,
-                              textCapitalization: TextCapitalization.words,
-                              decoration: const InputDecoration(
-                                hintText: 'Jean',
-                                prefixIcon: Icon(Icons.person_outline_rounded, color: AppTheme.primary),
-                              ),
-                            ),
-                          ],
+                  // Logo
+                  Center(
+                    child: Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppTheme.primary, AppTheme.primaryLight],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: AppTheme.elevatedShadow(AppTheme.primary),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildLabel('Nom'),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _lastNameController,
-                              textCapitalization: TextCapitalization.words,
-                              decoration: const InputDecoration(
-                                hintText: 'Dupont',
-                                prefixIcon: Icon(Icons.person_outline_rounded, color: AppTheme.primary),
-                              ),
-                            ),
-                          ],
-                        ),
+                      child: Icon(
+                        _isForgotPassword ? Icons.lock_reset_rounded : Icons.eco_rounded,
+                        size: 42,
+                        color: Colors.white,
                       ),
-                    ],
-                  ).animate().fadeIn(delay: 320.ms).slideX(begin: 0.05),
-                  const SizedBox(height: 16),
+                    ),
+                  ).animate().scale(begin: const Offset(0.5, 0.5), duration: 500.ms, curve: Curves.elasticOut),
+                  const SizedBox(height: 28),
 
-                  // Username
-                  _buildLabel('Nom d\'utilisateur'),
+                  // Title
+                  Center(
+                    child: Text(
+                      _isForgotPassword
+                          ? 'Mot de passe oublié'
+                          : _isRegister
+                              ? 'Créer un compte'
+                              : 'Connexion',
+                      style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+                    ),
+                  ).animate().fadeIn(delay: 200.ms),
                   const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _usernameController,
-                    decoration: const InputDecoration(
-                      hintText: 'Votre pseudo unique',
-                      prefixIcon: Icon(Icons.alternate_email_rounded, color: AppTheme.primary),
+                  Center(
+                    child: Text(
+                      _isForgotPassword
+                          ? 'Entrez votre email pour réinitialiser'
+                          : _isRegister
+                              ? 'Rejoignez la communauté Yuka2'
+                              : 'Accédez à votre espace personnel',
+                      style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary),
                     ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Champ requis';
-                      if (v.length < 3) return '3 caractères minimum';
-                      return null;
-                    },
-                  ).animate().fadeIn(delay: 350.ms).slideX(begin: 0.05),
-                  const SizedBox(height: 16),
-                ],
+                  ).animate().fadeIn(delay: 300.ms),
+                  const SizedBox(height: 36),
 
-                // Email (login + register)
-                if (!_isForgotPassword) ...[
-                  _buildLabel('Email'),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      hintText: 'votre@email.com',
-                      prefixIcon: Icon(Icons.email_outlined, color: AppTheme.primary),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Champ requis';
-                      if (!v.contains('@')) return 'Email invalide';
-                      return null;
-                    },
-                  ).animate().fadeIn(delay: 400.ms).slideX(begin: 0.05),
-                  const SizedBox(height: 16),
-
-                  // Password
-                  _buildLabel('Mot de passe'),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    decoration: InputDecoration(
-                      hintText: 'Votre mot de passe',
-                      prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppTheme.primary),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                          color: AppTheme.textSecondary,
-                        ),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                      ),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Champ requis';
-                      if (v.length < 8) return '8 caractères minimum';
-                      return null;
-                    },
-                  ).animate().fadeIn(delay: 450.ms).slideX(begin: 0.05),
-
-                  // Password strength indicator (register only)
-                  if (_isRegister && _passwordStrengthText.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: _passwordStrength,
-                        backgroundColor: Colors.grey.shade200,
-                        color: _passwordStrengthColor,
-                        minHeight: 4,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _passwordStrengthText,
-                          style: GoogleFonts.inter(fontSize: 12, color: _passwordStrengthColor, fontWeight: FontWeight.w600),
-                        ),
-                        Text(
-                          'Min. 8 caractères, majuscule, chiffre, symbole',
-                          style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-
-                  // Confirm password (register only)
-                  if (_isRegister) ...[
-                    _buildLabel('Confirmer le mot de passe'),
+                  // Forgot password
+                  if (_isForgotPassword) ...[
+                    _buildLabel('Email'),
                     const SizedBox(height: 8),
                     TextFormField(
-                      controller: _confirmPasswordController,
-                      obscureText: _obscureConfirm,
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        hintText: 'votre@email.com',
+                        prefixIcon: Icon(Icons.email_outlined, color: AppTheme.primary),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Champ requis';
+                        if (!v.contains('@')) return 'Email invalide';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // Register fields
+                  if (_isRegister && !_isForgotPassword) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildLabel('Prénom'),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: _firstNameController,
+                                textCapitalization: TextCapitalization.words,
+                                decoration: const InputDecoration(
+                                  hintText: 'Jean',
+                                  prefixIcon: Icon(Icons.person_outline_rounded, color: AppTheme.primary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildLabel('Nom'),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: _lastNameController,
+                                textCapitalization: TextCapitalization.words,
+                                decoration: const InputDecoration(
+                                  hintText: 'Dupont',
+                                  prefixIcon: Icon(Icons.person_outline_rounded, color: AppTheme.primary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ).animate().fadeIn(delay: 320.ms).slideX(begin: 0.05),
+                    const SizedBox(height: 16),
+
+                    _buildLabel('Nom d\'utilisateur'),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _usernameController,
+                      decoration: const InputDecoration(
+                        hintText: 'Votre pseudo unique',
+                        prefixIcon: Icon(Icons.alternate_email_rounded, color: AppTheme.primary),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Champ requis';
+                        if (v.length < 3) return '3 caractères minimum';
+                        return null;
+                      },
+                    ).animate().fadeIn(delay: 350.ms).slideX(begin: 0.05),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Email + Password
+                  if (!_isForgotPassword) ...[
+                    _buildLabel('Email'),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        hintText: 'votre@email.com',
+                        prefixIcon: Icon(Icons.email_outlined, color: AppTheme.primary),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Champ requis';
+                        if (!v.contains('@')) return 'Email invalide';
+                        return null;
+                      },
+                    ).animate().fadeIn(delay: 400.ms).slideX(begin: 0.05),
+                    const SizedBox(height: 16),
+
+                    _buildLabel('Mot de passe'),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
                       decoration: InputDecoration(
-                        hintText: 'Retapez votre mot de passe',
+                        hintText: 'Votre mot de passe',
                         prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppTheme.primary),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscureConfirm ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                            _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
                             color: AppTheme.textSecondary,
                           ),
-                          onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                         ),
                       ),
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Champ requis';
-                        if (v != _passwordController.text) return 'Les mots de passe ne correspondent pas';
+                        if (v.length < 8) return '8 caractères minimum';
                         return null;
                       },
-                    ).animate().fadeIn(delay: 480.ms).slideX(begin: 0.05),
+                    ).animate().fadeIn(delay: 450.ms).slideX(begin: 0.05),
+
+                    // Password strength
+                    if (_isRegister && _passwordStrengthText.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: _passwordStrength,
+                          backgroundColor: Colors.grey.shade200,
+                          color: _passwordStrengthColor,
+                          minHeight: 5,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            _passwordStrengthText,
+                            style: GoogleFonts.inter(fontSize: 12, color: _passwordStrengthColor, fontWeight: FontWeight.w600),
+                          ),
+                          Text(
+                            'Min. 8 car., majuscule, chiffre, symbole',
+                            style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 16),
+
+                    // Confirm password
+                    if (_isRegister) ...[
+                      _buildLabel('Confirmer le mot de passe'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _confirmPasswordController,
+                        obscureText: _obscureConfirm,
+                        decoration: InputDecoration(
+                          hintText: 'Retapez votre mot de passe',
+                          prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppTheme.primary),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureConfirm ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                              color: AppTheme.textSecondary,
+                            ),
+                            onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                          ),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return 'Champ requis';
+                          if (v != _passwordController.text) return 'Les mots de passe ne correspondent pas';
+                          return null;
+                        },
+                      ).animate().fadeIn(delay: 480.ms).slideX(begin: 0.05),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Forgot password link
+                    if (!_isRegister)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _isForgotPassword = true),
+                          child: Text(
+                            'Mot de passe oublié ?',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: AppTheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ).animate().fadeIn(delay: 480.ms),
                   ],
 
-                  // Forgot password link (login only)
-                  if (!_isRegister)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: GestureDetector(
-                        onTap: () => setState(() => _isForgotPassword = true),
-                        child: Text(
-                          'Mot de passe oublié ?',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ).animate().fadeIn(delay: 480.ms),
-                ],
+                  const SizedBox(height: 32),
 
-                const SizedBox(height: 28),
-
-                // Submit
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: auth.isLoading ? null : _submit,
-                    child: auth.isLoading
-                        ? const SizedBox(
-                            width: 22, height: 22,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                          )
-                        : Text(
-                            _isForgotPassword
-                                ? 'Envoyer le lien'
-                                : _isRegister
-                                    ? 'Créer mon compte'
-                                    : 'Se connecter',
-                          ),
-                  ),
-                ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.1),
-
-                // Biometric login button
-                if (!_isRegister && !_isForgotPassword && _biometricAvailable && _biometricEnabled) ...[
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      const Expanded(child: Divider()),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text('ou', style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary)),
-                      ),
-                      const Expanded(child: Divider()),
-                    ],
-                  ).animate().fadeIn(delay: 520.ms),
-                  const SizedBox(height: 16),
+                  // Submit
                   SizedBox(
                     width: double.infinity,
-                    height: 52,
-                    child: OutlinedButton.icon(
-                      onPressed: _authenticateWithBiometric,
-                      icon: const Icon(Icons.fingerprint_rounded, size: 26, color: AppTheme.primary),
-                      label: Text('Se connecter avec l\'empreinte', style: GoogleFonts.inter(color: AppTheme.primary, fontWeight: FontWeight.w600)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppTheme.primary),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                    ),
-                  ).animate().fadeIn(delay: 540.ms).slideY(begin: 0.1),
-                ],
-                const SizedBox(height: 20),
-
-                // Toggle login/register
-                if (!_isForgotPassword)
-                  Center(
-                    child: GestureDetector(
-                      onTap: () => setState(() {
-                        _isRegister = !_isRegister;
-                        _formKey.currentState?.reset();
-                      }),
-                      child: RichText(
-                        text: TextSpan(
-                          style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary),
-                          children: [
-                            TextSpan(text: _isRegister ? 'Déjà un compte ? ' : 'Pas de compte ? '),
-                            TextSpan(
-                              text: _isRegister ? 'Se connecter' : 'S\'inscrire',
-                              style: GoogleFonts.inter(color: AppTheme.primary, fontWeight: FontWeight.w600),
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: auth.isLoading ? null : _submit,
+                      child: auth.isLoading
+                          ? const SizedBox(
+                              width: 22, height: 22,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                            )
+                          : Text(
+                              _isForgotPassword
+                                  ? 'Envoyer le lien'
+                                  : _isRegister
+                                      ? 'Créer mon compte'
+                                      : 'Se connecter',
                             ),
-                          ],
+                    ),
+                  ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.1),
+
+                  // Biometric
+                  if (!_isRegister && !_isForgotPassword && _biometricAvailable && _biometricEnabled) ...[
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('ou', style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary)),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
+                    ).animate().fadeIn(delay: 520.ms),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: OutlinedButton.icon(
+                        onPressed: _authenticateWithBiometric,
+                        icon: const Icon(Icons.fingerprint_rounded, size: 26, color: AppTheme.primary),
+                        label: Text('Se connecter avec l\'empreinte', style: GoogleFonts.inter(color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                      ),
+                    ).animate().fadeIn(delay: 540.ms).slideY(begin: 0.1),
+                  ],
+                  const SizedBox(height: 24),
+
+                  // Toggle
+                  if (!_isForgotPassword)
+                    Center(
+                      child: GestureDetector(
+                        onTap: () => setState(() {
+                          _isRegister = !_isRegister;
+                          _formKey.currentState?.reset();
+                        }),
+                        child: RichText(
+                          text: TextSpan(
+                            style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary),
+                            children: [
+                              TextSpan(text: _isRegister ? 'Déjà un compte ? ' : 'Pas de compte ? '),
+                              TextSpan(
+                                text: _isRegister ? 'Se connecter' : 'S\'inscrire',
+                                style: GoogleFonts.inter(color: AppTheme.primary, fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ).animate().fadeIn(delay: 600.ms),
+                    ).animate().fadeIn(delay: 600.ms),
 
-                const SizedBox(height: 32),
+                  const SizedBox(height: 32),
 
-                // Terms (register)
-                if (_isRegister && !_isForgotPassword)
-                  Center(
-                    child: Text(
-                      'En créant un compte, vous acceptez nos\nConditions d\'utilisation et Politique de confidentialité',
-                      style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary, height: 1.5),
-                      textAlign: TextAlign.center,
-                    ),
-                  ).animate().fadeIn(delay: 650.ms),
-              ],
+                  if (_isRegister && !_isForgotPassword)
+                    Center(
+                      child: Text(
+                        'En créant un compte, vous acceptez nos\nConditions d\'utilisation et Politique de confidentialité',
+                        style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary, height: 1.5),
+                        textAlign: TextAlign.center,
+                      ),
+                    ).animate().fadeIn(delay: 650.ms),
+                ],
+              ),
             ),
           ),
         ),

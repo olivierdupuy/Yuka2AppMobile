@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/product.dart';
@@ -34,80 +35,94 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scoreColor = AppTheme.healthScoreColor(product.healthScore);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onTap();
+          },
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+          splashColor: scoreColor.withValues(alpha: 0.08),
+          highlightColor: scoreColor.withValues(alpha: 0.04),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.08)),
+              boxShadow: AppTheme.cardShadow,
             ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Product icon/image
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: scoreColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  _getCategoryIcon(),
-                  color: scoreColor,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 14),
-              // Product info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product.name,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  // Product icon
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          scoreColor.withValues(alpha: 0.15),
+                          scoreColor.withValues(alpha: 0.05),
+                        ],
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      product.brand ?? 'Marque inconnue',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: AppTheme.textSecondary,
-                      ),
+                    child: Icon(
+                      _getCategoryIcon(),
+                      color: scoreColor,
+                      size: 26,
                     ),
-                    const SizedBox(height: 8),
-                    NutriScoreBadge(score: product.nutriScore, size: 24),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 14),
+                  // Product info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product.name,
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          product.brand ?? 'Marque inconnue',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        NutriScoreBadge(score: product.nutriScore, size: 24),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Health score
+                  HealthScoreCircle(
+                    score: product.healthScore,
+                    size: 48,
+                  ),
+                ],
               ),
-              // Health score
-              HealthScoreCircle(
-                score: product.healthScore,
-                size: 50,
-              ),
-            ],
+            ),
           ),
         ),
       ),
     )
         .animate()
-        .fadeIn(duration: 300.ms, delay: Duration(milliseconds: index * 50))
-        .slideX(begin: 0.05, end: 0, duration: 300.ms, delay: Duration(milliseconds: index * 50));
+        .fadeIn(duration: 350.ms, delay: Duration(milliseconds: index * 40))
+        .slideX(begin: 0.03, end: 0, duration: 350.ms, delay: Duration(milliseconds: index * 40));
   }
 }

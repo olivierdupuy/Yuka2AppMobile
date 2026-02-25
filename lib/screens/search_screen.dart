@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 import '../providers/product_provider.dart';
 import '../services/tracking_service.dart';
 import '../theme/app_theme.dart';
@@ -55,6 +57,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _onNutriFilterTap(String score) {
+    HapticFeedback.selectionClick();
     setState(() {
       _selectedNutriScore = _selectedNutriScore == score ? null : score;
     });
@@ -73,7 +76,7 @@ class _SearchScreenState extends State<SearchScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -85,25 +88,31 @@ class _SearchScreenState extends State<SearchScreen> {
                     color: AppTheme.textPrimary,
                   ),
                 ).animate().fadeIn(duration: 300.ms),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _searchController,
-                  onChanged: _onSearchChanged,
-                  decoration: InputDecoration(
-                    hintText: 'Nom du produit ou marque...',
-                    prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primary),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear_rounded, size: 20),
-                            onPressed: () {
-                              _searchController.clear();
-                              _onSearchChanged('');
-                            },
-                          )
-                        : null,
+                const SizedBox(height: 18),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: AppTheme.softShadow,
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Nom du produit ou marque...',
+                      prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primary),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 20),
+                              onPressed: () {
+                                _searchController.clear();
+                                _onSearchChanged('');
+                              },
+                            )
+                          : null,
+                    ),
                   ),
                 ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 // Nutri-Score filters
                 Row(
                   children: [
@@ -121,17 +130,18 @@ class _SearchScreenState extends State<SearchScreen> {
                       final isActive = _selectedNutriScore == score;
                       final color = AppTheme.nutriScoreColor(score);
                       return Padding(
-                        padding: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.only(right: 8),
                         child: GestureDetector(
                           onTap: () => _onNutriFilterTap(score),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            width: 36,
-                            height: 36,
+                            width: 38,
+                            height: 38,
                             decoration: BoxDecoration(
-                              color: isActive ? color : color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10),
-                              border: isActive ? null : Border.all(color: color.withValues(alpha: 0.3)),
+                              color: isActive ? color : color.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(12),
+                              border: isActive ? null : Border.all(color: color.withValues(alpha: 0.25)),
+                              boxShadow: isActive ? [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))] : null,
                             ),
                             alignment: Alignment.center,
                             child: Text(
@@ -148,10 +158,11 @@ class _SearchScreenState extends State<SearchScreen> {
                     }),
                   ],
                 ).animate().fadeIn(delay: 200.ms),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 // Toggle Open Food Facts
                 GestureDetector(
                   onTap: () {
+                    HapticFeedback.selectionClick();
                     setState(() => _searchOFF = !_searchOFF);
                     if (_searchController.text.isNotEmpty) {
                       _onSearchChanged(_searchController.text);
@@ -163,12 +174,12 @@ class _SearchScreenState extends State<SearchScreen> {
                     decoration: BoxDecoration(
                       color: _searchOFF
                           ? AppTheme.accent.withValues(alpha: 0.1)
-                          : Colors.grey.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
+                          : Colors.grey.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: _searchOFF
-                            ? AppTheme.accent.withValues(alpha: 0.4)
-                            : Colors.grey.withValues(alpha: 0.2),
+                            ? AppTheme.accent.withValues(alpha: 0.3)
+                            : Colors.grey.withValues(alpha: 0.15),
                       ),
                     ),
                     child: Row(
@@ -188,25 +199,26 @@ class _SearchScreenState extends State<SearchScreen> {
                             color: _searchOFF ? AppTheme.accent : AppTheme.textSecondary,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          width: 36,
-                          height: 20,
+                          width: 40,
+                          height: 22,
                           decoration: BoxDecoration(
                             color: _searchOFF ? AppTheme.accent : Colors.grey[300],
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(11),
                           ),
                           child: AnimatedAlign(
                             duration: const Duration(milliseconds: 200),
                             alignment: _searchOFF ? Alignment.centerRight : Alignment.centerLeft,
                             child: Container(
-                              width: 16,
-                              height: 16,
+                              width: 18,
+                              height: 18,
                               margin: const EdgeInsets.symmetric(horizontal: 2),
-                              decoration: const BoxDecoration(
+                              decoration: BoxDecoration(
                                 color: Colors.white,
                                 shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4)],
                               ),
                             ),
                           ),
@@ -223,17 +235,44 @@ class _SearchScreenState extends State<SearchScreen> {
           // Results
           Expanded(
             child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Column(
+                      children: List.generate(5, (i) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        child: Shimmer.fromColors(
+                          baseColor: Colors.grey.shade200,
+                          highlightColor: Colors.grey.shade50,
+                          child: Container(
+                            height: 90,
+                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                          ),
+                        ),
+                      )),
+                    ),
+                  )
                 : provider.products.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.search_off_rounded, size: 56, color: Colors.grey[300]),
-                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: AppTheme.textSecondary.withValues(alpha: 0.06),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.search_off_rounded, size: 48, color: AppTheme.textSecondary.withValues(alpha: 0.4)),
+                            ),
+                            const SizedBox(height: 16),
                             Text(
                               'Aucun résultat',
-                              style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 16),
+                              style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Essayez un autre mot-clé',
+                              style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 14),
                             ),
                           ],
                         ),

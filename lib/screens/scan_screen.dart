@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -60,6 +61,7 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
 
     _lastScannedCode = barcode;
     _hasScanned = true;
+    HapticFeedback.mediumImpact();
     _scanBarcode(barcode);
   }
 
