@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
 import 'screens/home_screen.dart';
+import 'screens/maintenance_screen.dart';
+import 'services/remote_config_service.dart';
 import 'services/tracking_service.dart';
 import 'theme/app_theme.dart';
 
@@ -30,16 +32,36 @@ class Yuka2App extends StatefulWidget {
 }
 
 class _Yuka2AppState extends State<Yuka2App> with WidgetsBindingObserver {
+  bool _configLoaded = false;
+  BlockingReason? _blockingReason;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _checkRemoteConfig();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  Future<void> _checkRemoteConfig() async {
+    final config = await RemoteConfigService.instance.fetchConfig();
+
+    BlockingReason? reason;
+    if (config.maintenanceMode) {
+      reason = BlockingReason.maintenance;
+    } else if (config.requiresUpdate) {
+      reason = BlockingReason.forceUpdate;
+    }
+
+    setState(() {
+      _blockingReason = reason;
+      _configLoaded = true;
+    });
   }
 
   @override
@@ -50,6 +72,8 @@ class _Yuka2AppState extends State<Yuka2App> with WidgetsBindingObserver {
   Future<void> _handleLifecycleChange(AppLifecycleState state) async {
     try {
       if (state == AppLifecycleState.resumed) {
+        // Re-check config when app comes back to foreground
+        _checkRemoteConfig();
         await TrackingService.instance.startSession();
         TrackingService.instance.trackEvent('app_open');
       } else if (state == AppLifecycleState.paused) {
@@ -73,8 +97,28 @@ class _Yuka2AppState extends State<Yuka2App> with WidgetsBindingObserver {
         title: 'Yuka2',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const HomeScreen(),
+        home: _buildHome(),
       ),
     );
+  }
+
+  Widget _buildHome() {
+    if (!_configLoaded) {
+      // Show a simple loading while checking config
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF1B5E20)),
+        ),
+      );
+    }
+
+    if (_blockingReason != null) {
+      return MaintenanceScreen(
+        reason: _blockingReason!,
+        onRetry: _checkRemoteConfig,
+      );
+    }
+
+    return const HomeScreen();
   }
 }

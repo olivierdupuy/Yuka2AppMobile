@@ -6,6 +6,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
+import '../services/remote_config_service.dart';
 import '../services/tracking_service.dart';
 import '../theme/app_theme.dart';
 
@@ -529,13 +530,21 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   const SizedBox(height: 24),
 
                   // Toggle
-                  if (!_isForgotPassword)
+                  if (!_isForgotPassword && (RemoteConfigService.instance.config.registrationEnabled || _isRegister))
                     Center(
                       child: GestureDetector(
-                        onTap: () => setState(() {
-                          _isRegister = !_isRegister;
-                          _formKey.currentState?.reset();
-                        }),
+                        onTap: () {
+                          if (!_isRegister && !RemoteConfigService.instance.config.registrationEnabled) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('L\'inscription est temporairement désactivée')),
+                            );
+                            return;
+                          }
+                          setState(() {
+                            _isRegister = !_isRegister;
+                            _formKey.currentState?.reset();
+                          });
+                        },
                         child: RichText(
                           text: TextSpan(
                             style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary),

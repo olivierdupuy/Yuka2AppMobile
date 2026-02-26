@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../providers/auth_provider.dart';
 import '../providers/product_provider.dart';
+import '../services/remote_config_service.dart';
 import '../services/tracking_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/product_card.dart';
@@ -35,7 +36,26 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _goToSearch() {
+    final config = RemoteConfigService.instance.config;
+    if (!config.searchEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('La recherche est temporairement désactivée')),
+      );
+      return;
+    }
     setState(() => _currentIndex = 1);
+  }
+
+  void _goToScan() {
+    final config = RemoteConfigService.instance.config;
+    if (!config.scanEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Le scanner est temporairement désactivé')),
+      );
+      return;
+    }
+    HapticFeedback.mediumImpact();
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanScreen()));
   }
 
   @override
@@ -69,12 +89,9 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _NavItem(icon: Icons.home_rounded, label: 'Accueil', isActive: _currentIndex == 0, onTap: () => setState(() => _currentIndex = 0)),
-                _NavItem(icon: Icons.search_rounded, label: 'Recherche', isActive: _currentIndex == 1, onTap: () => setState(() => _currentIndex = 1)),
+                _NavItem(icon: Icons.search_rounded, label: 'Recherche', isActive: _currentIndex == 1, onTap: _goToSearch),
                 GestureDetector(
-                  onTap: () {
-                    HapticFeedback.mediumImpact();
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ScanScreen()));
-                  },
+                  onTap: _goToScan,
                   child: Container(
                     width: 60, height: 60,
                     decoration: BoxDecoration(
