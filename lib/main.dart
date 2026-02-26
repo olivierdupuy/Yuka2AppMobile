@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/compare_provider.dart';
 import 'providers/product_provider.dart';
+import 'providers/review_provider.dart';
+import 'providers/shopping_list_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/maintenance_screen.dart';
 import 'services/remote_config_service.dart';
@@ -106,6 +109,18 @@ class _Yuka2AppState extends State<Yuka2App> with WidgetsBindingObserver {
         ChangeNotifierProxyProvider<AuthProvider, ProductProvider>(
           create: (ctx) => ProductProvider(ctx.read<AuthProvider>().api),
           update: (ctx, auth, prev) => prev ?? ProductProvider(auth.api),
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, ReviewProvider>(
+          create: (ctx) => ReviewProvider(ctx.read<AuthProvider>().api),
+          update: (ctx, auth, prev) => prev ?? ReviewProvider(auth.api),
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, ShoppingListProvider>(
+          create: (ctx) => ShoppingListProvider(ctx.read<AuthProvider>().api),
+          update: (ctx, auth, prev) => prev ?? ShoppingListProvider(auth.api),
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, CompareProvider>(
+          create: (ctx) => CompareProvider(ctx.read<AuthProvider>().api),
+          update: (ctx, auth, prev) => prev ?? CompareProvider(auth.api),
         ),
       ],
       child: MaterialApp(

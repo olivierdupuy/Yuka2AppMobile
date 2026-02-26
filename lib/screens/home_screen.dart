@@ -5,12 +5,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../providers/auth_provider.dart';
+import '../providers/compare_provider.dart';
 import '../providers/product_provider.dart';
 import '../services/remote_config_service.dart';
 import '../services/tracking_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/compare_fab.dart';
 import '../widgets/product_card.dart';
-import 'product_detail_screen.dart';
+import 'compare_screen.dart';
+import 'product_detail_screen.dart' hide CompareScreen;
 import 'scan_screen.dart';
 import 'search_screen.dart';
 import 'history_screen.dart';
@@ -70,6 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       body: screens[_currentIndex],
+      floatingActionButton: _currentIndex == 0 ? const CompareFab() : null,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -310,7 +314,69 @@ class _HomeContent extends StatelessWidget {
                       ),
                     ),
                   ).animate().fadeIn(duration: 500.ms, delay: 200.ms).slideY(begin: 0.08),
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 16),
+
+                  // ==================== COMPARATOR SHORTCUT ====================
+                  Consumer<CompareProvider>(
+                    builder: (context, compare, _) {
+                      if (compare.selectedCount == 0) return const SizedBox.shrink();
+                      return GestureDetector(
+                        onTap: () {
+                          if (compare.canCompare) {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const CompareScreen()));
+                          }
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                            boxShadow: AppTheme.cardShadow,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(Icons.compare_arrows, color: AppTheme.primary, size: 22),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Comparateur', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${compare.selectedCount} produit${compare.selectedCount > 1 ? 's' : ''} sélectionné${compare.selectedCount > 1 ? 's' : ''}',
+                                      style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: compare.canCompare ? AppTheme.primary : Colors.grey.shade300,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  compare.canCompare ? 'Comparer' : '${compare.selectedCount}/2 min',
+                                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05);
+                    },
+                  ),
+                  const SizedBox(height: 10),
 
                   // ==================== NUTRISCORE QUICK FILTER ====================
                   Text('NutriScore', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary))

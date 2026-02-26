@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/allergen_check.dart';
 import '../models/product.dart';
+import '../models/review.dart';
+import '../models/shopping_list.dart';
 import '../models/user.dart';
 
 class ApiService {
@@ -498,5 +501,183 @@ class ApiService {
       return list.map((e) => ProductSearch.fromJson(e as Map<String, dynamic>)).toList();
     }
     return [];
+  }
+
+  // ==================== REVIEWS ====================
+
+  Future<ProductReviewSummary?> getProductReviews(int productId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/reviews/product/$productId'),
+        headers: await _headers,
+      );
+      if (response.statusCode == 200) {
+        return ProductReviewSummary.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<Review?> createReview(int productId, int rating, String? comment) async {
+    try {
+      final response = await _authRequest((headers) => http.post(
+        Uri.parse('$baseUrl/reviews/product/$productId'),
+        headers: headers,
+        body: jsonEncode({'rating': rating, 'comment': comment}),
+      ));
+      if (response.statusCode == 200) {
+        return Review.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<bool> deleteReview(int reviewId) async {
+    final response = await _authRequest((headers) => http.delete(
+      Uri.parse('$baseUrl/reviews/$reviewId'),
+      headers: headers,
+    ));
+    return response.statusCode == 200;
+  }
+
+  Future<List<Review>> getMyReviews() async {
+    try {
+      final response = await _authRequest((headers) => http.get(
+        Uri.parse('$baseUrl/reviews/my'),
+        headers: headers,
+      ));
+      if (response.statusCode == 200) {
+        final list = jsonDecode(response.body) as List;
+        return list.map((e) => Review.fromJson(e as Map<String, dynamic>)).toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  // ==================== SHOPPING LISTS ====================
+
+  Future<List<ShoppingListModel>> getShoppingLists() async {
+    try {
+      final response = await _authRequest((headers) => http.get(
+        Uri.parse('$baseUrl/shoppinglists'),
+        headers: headers,
+      ));
+      if (response.statusCode == 200) {
+        final list = jsonDecode(response.body) as List;
+        return list.map((e) => ShoppingListModel.fromJson(e as Map<String, dynamic>)).toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  Future<ShoppingListModel?> createShoppingList(String name) async {
+    try {
+      final response = await _authRequest((headers) => http.post(
+        Uri.parse('$baseUrl/shoppinglists'),
+        headers: headers,
+        body: jsonEncode({'name': name}),
+      ));
+      if (response.statusCode == 200) {
+        return ShoppingListModel.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<ShoppingListDetail?> getShoppingListDetail(int listId) async {
+    try {
+      final response = await _authRequest((headers) => http.get(
+        Uri.parse('$baseUrl/shoppinglists/$listId'),
+        headers: headers,
+      ));
+      if (response.statusCode == 200) {
+        return ShoppingListDetail.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<bool> deleteShoppingList(int listId) async {
+    final response = await _authRequest((headers) => http.delete(
+      Uri.parse('$baseUrl/shoppinglists/$listId'),
+      headers: headers,
+    ));
+    return response.statusCode == 200;
+  }
+
+  Future<ShoppingListItemModel?> addShoppingListItem(int listId, {int? productId, required String name, int quantity = 1}) async {
+    try {
+      final response = await _authRequest((headers) => http.post(
+        Uri.parse('$baseUrl/shoppinglists/$listId/items'),
+        headers: headers,
+        body: jsonEncode({
+          'name': name,
+          'quantity': quantity,
+          if (productId != null) 'productId': productId,
+        }),
+      ));
+      if (response.statusCode == 200) {
+        return ShoppingListItemModel.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<ShoppingListItemModel?> updateShoppingListItem(int listId, int itemId, {String? name, int? quantity, bool? isChecked}) async {
+    try {
+      final body = <String, dynamic>{};
+      if (name != null) body['name'] = name;
+      if (quantity != null) body['quantity'] = quantity;
+      if (isChecked != null) body['isChecked'] = isChecked;
+
+      final response = await _authRequest((headers) => http.put(
+        Uri.parse('$baseUrl/shoppinglists/$listId/items/$itemId'),
+        headers: headers,
+        body: jsonEncode(body),
+      ));
+      if (response.statusCode == 200) {
+        return ShoppingListItemModel.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<bool> removeShoppingListItem(int listId, int itemId) async {
+    final response = await _authRequest((headers) => http.delete(
+      Uri.parse('$baseUrl/shoppinglists/$listId/items/$itemId'),
+      headers: headers,
+    ));
+    return response.statusCode == 200;
+  }
+
+  // ==================== COMPARE ====================
+
+  Future<Map<String, dynamic>?> compareProducts(List<int> productIds) async {
+    try {
+      final response = await _authRequest((headers) => http.post(
+        Uri.parse('$baseUrl/products/compare'),
+        headers: headers,
+        body: jsonEncode({'productIds': productIds}),
+      ));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // ==================== ALLERGENS ====================
+
+  Future<AllergenCheckResult?> checkAllergens(int productId) async {
+    try {
+      final response = await _authRequest((headers) => http.get(
+        Uri.parse('$baseUrl/products/allergen-check/$productId'),
+        headers: headers,
+      ));
+      if (response.statusCode == 200) {
+        return AllergenCheckResult.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return null;
   }
 }

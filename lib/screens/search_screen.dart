@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import '../providers/compare_provider.dart';
 import '../providers/product_provider.dart';
 import '../services/remote_config_service.dart';
 import '../services/tracking_service.dart';
@@ -278,20 +279,61 @@ class _SearchScreenState extends State<SearchScreen> {
                           ],
                         ),
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(top: 8),
-                        itemCount: provider.products.length,
-                        itemBuilder: (context, index) {
-                          final product = provider.products[index];
-                          return ProductCard(
-                            product: product,
-                            index: index,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ProductDetailScreen(productId: product.id),
-                                ),
+                    : Consumer<CompareProvider>(
+                        builder: (context, compare, _) {
+                          return ListView.builder(
+                            padding: const EdgeInsets.only(top: 8),
+                            itemCount: provider.products.length,
+                            itemBuilder: (context, index) {
+                              final product = provider.products[index];
+                              final isSelected = compare.isSelected(product.id);
+                              return Stack(
+                                children: [
+                                  ProductCard(
+                                    product: product,
+                                    index: index,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ProductDetailScreen(productId: product.id),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  Positioned(
+                                    right: 24,
+                                    top: 12,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        HapticFeedback.selectionClick();
+                                        compare.toggleProduct(product);
+                                      },
+                                      child: AnimatedContainer(
+                                        duration: const Duration(milliseconds: 200),
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? AppTheme.primary : Colors.white,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: isSelected ? AppTheme.primary : Colors.grey.shade300,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.08),
+                                              blurRadius: 4,
+                                            ),
+                                          ],
+                                        ),
+                                        child: Icon(
+                                          Icons.compare_arrows,
+                                          size: 16,
+                                          color: isSelected ? Colors.white : Colors.grey.shade500,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               );
                             },
                           );

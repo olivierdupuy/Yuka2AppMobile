@@ -10,6 +10,9 @@ import '../services/remote_config_service.dart';
 import '../services/tracking_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
+import '../providers/review_provider.dart';
+import '../screens/shopping_list_screen.dart';
+import '../screens/compare_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -187,6 +190,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 16),
             ],
 
+            // Allergens quick selection
+            const SizedBox(height: 20),
+            Text('Mes allergènes', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                'Gluten', 'Lait', 'Oeufs', 'Arachides', 'Soja', 'Fruits à coque', 'Poisson', 'Crustacés', 'Céleri', 'Moutarde', 'Sésame', 'Sulfites'
+              ].map((allergen) {
+                final currentAllergies = auth.profile?.allergies?.split(',').map((a) => a.trim()).toList() ?? [];
+                final isSelected = currentAllergies.any((a) => a.toLowerCase() == allergen.toLowerCase());
+                return FilterChip(
+                  label: Text(allergen),
+                  selected: isSelected,
+                  selectedColor: const Color(0xFF1B5E20).withValues(alpha: 0.15),
+                  checkmarkColor: const Color(0xFF1B5E20),
+                  onSelected: (selected) {
+                    final updated = List<String>.from(currentAllergies);
+                    if (selected) {
+                      updated.add(allergen);
+                    } else {
+                      updated.removeWhere((a) => a.toLowerCase() == allergen.toLowerCase());
+                    }
+                    auth.updatePreferences(allergies: updated.join(','));
+                  },
+                );
+              }).toList(),
+            ),
+
             // Menu sections
             _SectionTitle(title: 'Mon profil'),
             _MenuItem(
@@ -199,6 +232,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
               subtitle: profile?.dietType ?? 'Non défini', color: AppTheme.nutriA,
               onTap: () => _showPreferencesSheet(context),
             ).animate().fadeIn(delay: 440.ms).slideX(begin: 0.03),
+            _MenuItem(
+              icon: Icons.shopping_cart_outlined, label: 'Mes listes de courses',
+              subtitle: 'Gérer mes listes', color: AppTheme.nutriB,
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ShoppingListScreen())),
+            ).animate().fadeIn(delay: 450.ms).slideX(begin: 0.03),
+            _MenuItem(
+              icon: Icons.compare_arrows, label: 'Mon comparateur',
+              subtitle: 'Comparer des produits', color: AppTheme.nutriC,
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CompareScreen())),
+            ).animate().fadeIn(delay: 455.ms).slideX(begin: 0.03),
+            _MenuItem(
+              icon: Icons.rate_review_outlined, label: 'Mes avis',
+              subtitle: 'Voir mes avis publiés', color: AppTheme.accent,
+              onTap: () {
+                context.read<ReviewProvider>().loadMyReviews();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Mes avis chargés'), backgroundColor: Color(0xFF1B5E20)),
+                );
+              },
+            ).animate().fadeIn(delay: 458.ms).slideX(begin: 0.03),
 
             const SizedBox(height: 8),
             _SectionTitle(title: 'Sécurité'),

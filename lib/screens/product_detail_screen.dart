@@ -10,6 +10,13 @@ import '../services/tracking_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/nutri_score_badge.dart';
 import '../widgets/eco_score_badge.dart';
+import '../providers/auth_provider.dart';
+import '../providers/compare_provider.dart';
+import '../providers/review_provider.dart';
+import '../providers/shopping_list_provider.dart';
+import '../models/allergen_check.dart';
+import '../widgets/star_rating.dart';
+import '../widgets/allergen_banner.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final int productId;
@@ -21,6 +28,8 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  AllergenCheckResult? _allergenCheck;
+
   @override
   void initState() {
     super.initState();
@@ -30,10 +39,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     } catch (_) {}
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<ProductProvider>();
-      provider.loadProductById(widget.productId).then((_) {
+      provider.loadProductById(widget.productId).then((_) async {
         final product = provider.selectedProduct;
         if (product != null) {
           provider.loadAlternatives(product.categories, product.healthScore, product.id);
+          // Check allergens
+          final auth = context.read<AuthProvider>();
+          if (auth.isAuthenticated) {
+            final result = await auth.api.checkAllergens(product.id);
+            if (mounted) setState(() => _allergenCheck = result);
+            // Load reviews
+            context.read<ReviewProvider>().loadReviews(product.id);
+          }
         }
       });
     });
@@ -114,6 +131,39 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 ),
                                 Row(
                                   children: [
+                                    // Compare button
+                                    Consumer<CompareProvider>(
+                                      builder: (ctx, compareProv, _) => GestureDetector(
+                                        onTap: () => compareProv.toggleProduct(ProductSearch(
+                                          id: product.id, barcode: product.barcode, name: product.name,
+                                          brand: product.brand, imageUrl: product.imageUrl,
+                                          nutriScore: product.nutriScore, healthScore: product.healthScore,
+                                          categories: product.categories,
+                                        )),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(alpha: 0.2),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Icon(Icons.compare_arrows, color: Colors.white, size: 22),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    // Add to shopping list button
+                                    GestureDetector(
+                                      onTap: () => _showAddToListSheet(product),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Icon(Icons.add_shopping_cart, color: Colors.white, size: 22),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
                                     // Share button
                                     GestureDetector(
                                       onTap: () => _shareProduct(product),
@@ -225,6 +275,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                   ),
                 ),
+
+                if (_allergenCheck != null && _allergenCheck!.hasAlert)
+                  SliverToBoxAdapter(
+                    child: AllergenBanner(matchedAllergens: _allergenCheck!.matchedAllergens),
+                  ),
 
                 // ==================== CONTENT ====================
                 SliverToBoxAdapter(
@@ -403,6 +458,100 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           // ==================== BETTER ALTERNATIVES ====================
                           if (provider.alternatives.isNotEmpty)
                             _buildAlternativesSection(provider.alternatives).animate().fadeIn(delay: 600.ms).slideY(begin: 0.1),
+
+                          // ==================== REVIEWS SECTION ====================
+                          const SizedBox(height: 16),
+                          Consumer<ReviewProvider>(
+                            builder: (ctx, reviewProv, _) => _SectionCard(
+                              title: 'Avis & Notes',
+                              icon: Icons.star_rounded,
+                              iconColor: const Color(0xFFFFA726),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if ((reviewProv.summary?.averageRating ?? 0) > 0) ...[
+                                    Row(
+                                      children: [
+                                        Text(
+                                          (reviewProv.summary?.averageRating ?? 0).toStringAsFixed(1),
+                                          style: GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            StarRating(rating: reviewProv.summary?.averageRating ?? 0, size: 22),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '${(reviewProv.summary?.reviews ?? []).length} avis',
+                                              style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                  ],
+                                  if ((reviewProv.summary?.reviews ?? []).isEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      child: Center(
+                                        child: Text(
+                                          'Aucun avis pour le moment',
+                                          style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary),
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    ...(reviewProv.summary?.reviews ?? []).take(5).map((review) => Container(
+                                      margin: const EdgeInsets.only(bottom: 10),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.surface,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              StarRating(rating: review.rating.toDouble(), size: 16),
+                                              const Spacer(),
+                                              Text(
+                                                review.username.isEmpty ? 'Anonyme' : review.username,
+                                                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
+                                              ),
+                                            ],
+                                          ),
+                                          if (review.comment != null && review.comment!.isNotEmpty) ...[
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              review.comment!,
+                                              style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textPrimary, height: 1.4),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    )),
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => _showReviewSheet(product.id),
+                                      icon: const Icon(Icons.rate_review_rounded),
+                                      label: const Text('Laisser un avis'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: const Color(0xFF1B5E20),
+                                        side: const BorderSide(color: Color(0xFF1B5E20)),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ).animate().fadeIn(delay: 620.ms).slideY(begin: 0.1),
 
                           // ==================== COMPARE BUTTON ====================
                           const SizedBox(height: 16),
@@ -637,6 +786,111 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _sugarLevel(double? v) => v == null ? 0 : v > 20 ? 3 : v > 10 ? 2 : 1;
   int _saltLevel(double? v) => v == null ? 0 : v > 1.5 ? 3 : v > 0.5 ? 2 : 1;
   int _fiberLevel(double? v) => v == null ? 0 : v > 3 ? 1 : v > 1 ? 2 : 3;
+
+  void _showAddToListSheet(Product product) {
+    final provider = context.read<ShoppingListProvider>();
+    provider.loadLists();
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Consumer<ShoppingListProvider>(
+        builder: (ctx, listProvider, _) {
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Ajouter à une liste', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 16),
+                if (listProvider.lists.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Center(child: Text('Aucune liste. Créez-en une depuis le profil.')),
+                  )
+                else
+                  ...listProvider.lists.map((list) => ListTile(
+                    leading: const Icon(Icons.list_alt, color: Color(0xFF1B5E20)),
+                    title: Text(list.name),
+                    subtitle: Text('${list.itemCount} articles'),
+                    onTap: () async {
+                      await listProvider.addItem(list.id, productId: product.id, name: product.name);
+                      if (ctx.mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Ajouté à "${list.name}"'), backgroundColor: const Color(0xFF1B5E20)),
+                        );
+                      }
+                    },
+                  )),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showReviewSheet(int productId) {
+    int rating = 0;
+    final commentController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: StatefulBuilder(
+          builder: (ctx, setSheetState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Laisser un avis', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              Center(
+                child: StarRating(
+                  rating: rating.toDouble(),
+                  size: 40,
+                  onRatingChanged: (val) => setSheetState(() => rating = val),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: commentController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText: 'Votre commentaire (optionnel)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: rating > 0
+                      ? () async {
+                          final success = await context.read<ReviewProvider>().submitReview(
+                            productId, rating, commentController.text.trim().isEmpty ? null : commentController.text.trim(),
+                          );
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx);
+                            if (success) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Avis publié !'), backgroundColor: Color(0xFF1B5E20)),
+                              );
+                            }
+                          }
+                        }
+                      : null,
+                  child: const Text('Publier'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ==================== SECTION CARD ====================
