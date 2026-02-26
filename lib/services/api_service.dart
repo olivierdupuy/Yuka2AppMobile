@@ -8,7 +8,7 @@ import '../models/shopping_list.dart';
 import '../models/user.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:5000/api';
+  static const String baseUrl = 'http://192.168.1.30:5000/api';
 
   String? _accessToken;
   String? _refreshToken;
