@@ -44,13 +44,17 @@ class _Yuka2AppState extends State<Yuka2App> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _handleLifecycleChange(state);
+  }
+
+  Future<void> _handleLifecycleChange(AppLifecycleState state) async {
     try {
       if (state == AppLifecycleState.resumed) {
-        TrackingService.instance.startSession();
+        await TrackingService.instance.startSession();
         TrackingService.instance.trackEvent('app_open');
       } else if (state == AppLifecycleState.paused) {
         TrackingService.instance.trackEvent('app_background');
-        TrackingService.instance.endSession();
+        await TrackingService.instance.endSession();
       }
     } catch (_) {}
   }

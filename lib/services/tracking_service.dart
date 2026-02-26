@@ -66,9 +66,10 @@ class TrackingService {
         if (_authToken != null) 'Authorization': 'Bearer $_authToken',
       };
 
-  /// Start a new tracking session.
+  /// Start a new tracking session, closing any previous one.
   Future<void> startSession() async {
     try {
+      final previousSessionId = _sessionId;
       final response = await http.post(
         Uri.parse('$_baseUrl/tracking/session/start'),
         headers: _headers,
@@ -77,6 +78,7 @@ class TrackingService {
           'deviceModel': _deviceModel,
           'deviceOS': _deviceOS,
           'appVersion': '1.0.0',
+          if (previousSessionId != null) 'previousSessionId': previousSessionId,
         }),
       );
       if (response.statusCode == 200) {
@@ -90,11 +92,12 @@ class TrackingService {
   Future<void> endSession() async {
     if (_sessionId == null) return;
     try {
-      http.post(
+      await http.post(
         Uri.parse('$_baseUrl/tracking/session/end'),
         headers: _headers,
         body: jsonEncode({'sessionId': _sessionId}),
       );
+      _sessionId = null;
     } catch (_) {}
   }
 
