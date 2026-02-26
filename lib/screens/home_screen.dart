@@ -13,7 +13,7 @@ import '../theme/app_theme.dart';
 import '../widgets/compare_fab.dart';
 import '../widgets/product_card.dart';
 import 'compare_screen.dart';
-import 'product_detail_screen.dart' hide CompareScreen;
+import 'product_detail_screen.dart';
 import 'scan_screen.dart';
 import 'search_screen.dart';
 import 'history_screen.dart';

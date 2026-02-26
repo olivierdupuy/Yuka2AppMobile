@@ -17,6 +17,7 @@ import '../providers/shopping_list_provider.dart';
 import '../models/allergen_check.dart';
 import '../widgets/star_rating.dart';
 import '../widgets/allergen_banner.dart';
+import 'compare_screen.dart' as standalone;
 
 class ProductDetailScreen extends StatefulWidget {
   final int productId;
@@ -698,10 +699,48 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget _buildCompareButton(Product product) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => _CompareSelectionScreen(baseProduct: product)),
+        final compareProvider = context.read<CompareProvider>();
+        final productSearch = ProductSearch(
+          id: product.id,
+          barcode: product.barcode,
+          name: product.name,
+          brand: product.brand,
+          imageUrl: product.imageUrl,
+          nutriScore: product.nutriScore,
+          healthScore: product.healthScore,
+          categories: product.categories,
         );
+        if (!compareProvider.isSelected(product.id)) {
+          compareProvider.toggleProduct(productSearch);
+        }
+        if (compareProvider.canCompare) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const standalone.CompareScreen()),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.compare_arrows_rounded, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Produit ajouté au comparateur. Recherchez un autre produit pour comparer.',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFF1565C0),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          Navigator.pop(context);
+        }
       },
       child: Container(
         width: double.infinity,
@@ -1219,436 +1258,3 @@ class _AlternativeRow extends StatelessWidget {
   }
 }
 
-// ==================== COMPARE SELECTION SCREEN ====================
-class _CompareSelectionScreen extends StatelessWidget {
-  final Product baseProduct;
-
-  const _CompareSelectionScreen({required this.baseProduct});
-
-  @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<ProductProvider>();
-    final products = provider.products.where((p) => p.id != baseProduct.id).toList();
-
-    return Scaffold(
-      backgroundColor: AppTheme.surface,
-      appBar: AppBar(
-        title: Text('Comparer avec...', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: products.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.compare_arrows_rounded, size: 56, color: Colors.grey[300]),
-                  const SizedBox(height: 12),
-                  Text('Aucun produit disponible pour la comparaison', style: GoogleFonts.inter(color: AppTheme.textSecondary)),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: products.length,
-              itemBuilder: (context, index) {
-                final product = products[index];
-                final scoreColor = AppTheme.healthScoreColor(product.healthScore);
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => CompareScreen(
-                          productId1: baseProduct.id,
-                          productId2: product.id,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2))],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 50, height: 50,
-                          decoration: BoxDecoration(color: scoreColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
-                          alignment: Alignment.center,
-                          child: Text('${product.healthScore ?? '?'}', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: scoreColor)),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(product.name, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
-                              Text(product.brand ?? '', style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary)),
-                            ],
-                          ),
-                        ),
-                        NutriScoreBadge(score: product.nutriScore, size: 22),
-                      ],
-                    ),
-                  ),
-                ).animate().fadeIn(delay: Duration(milliseconds: index * 40)).slideX(begin: 0.05);
-              },
-            ),
-    );
-  }
-}
-
-// ==================== COMPARE SCREEN ====================
-class CompareScreen extends StatefulWidget {
-  final int productId1;
-  final int productId2;
-
-  const CompareScreen({super.key, required this.productId1, required this.productId2});
-
-  @override
-  State<CompareScreen> createState() => _CompareScreenState();
-}
-
-class _CompareScreenState extends State<CompareScreen> {
-  Product? _product1;
-  Product? _product2;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadProducts();
-  }
-
-  Future<void> _loadProducts() async {
-    final provider = context.read<ProductProvider>();
-    // Load both products
-    await provider.loadProductById(widget.productId1);
-    _product1 = provider.selectedProduct;
-    await provider.loadProductById(widget.productId2);
-    _product2 = provider.selectedProduct;
-    if (mounted) setState(() => _isLoading = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.surface,
-      appBar: AppBar(
-        title: Text('Comparaison', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
-          : (_product1 == null || _product2 == null)
-              ? Center(child: Text('Erreur de chargement', style: GoogleFonts.inter(color: AppTheme.textSecondary)))
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      // Product headers
-                      Row(
-                        children: [
-                          Expanded(child: _CompareProductHeader(product: _product1!)),
-                          const SizedBox(width: 12),
-                          Expanded(child: _CompareProductHeader(product: _product2!)),
-                        ],
-                      ).animate().fadeIn(duration: 400.ms),
-
-                      const SizedBox(height: 20),
-
-                      // Comparison rows
-                      _CompareRow(
-                        label: 'Score santé',
-                        value1: '${_product1!.healthScore ?? '?'}/100',
-                        value2: '${_product2!.healthScore ?? '?'}/100',
-                        color1: AppTheme.healthScoreColor(_product1!.healthScore),
-                        color2: AppTheme.healthScoreColor(_product2!.healthScore),
-                        winner: _compareInt(_product1!.healthScore, _product2!.healthScore, higher: true),
-                      ).animate().fadeIn(delay: 100.ms),
-                      _CompareRow(
-                        label: 'Nutri-Score',
-                        value1: _product1!.nutriScore ?? '?',
-                        value2: _product2!.nutriScore ?? '?',
-                        color1: AppTheme.nutriScoreColor(_product1!.nutriScore),
-                        color2: AppTheme.nutriScoreColor(_product2!.nutriScore),
-                        winner: _compareNutriScore(_product1!.nutriScore, _product2!.nutriScore),
-                      ).animate().fadeIn(delay: 150.ms),
-                      _CompareRow(
-                        label: 'Eco-Score',
-                        value1: _product1!.computedEcoScore,
-                        value2: _product2!.computedEcoScore,
-                        color1: EcoScoreBadge.ecoScoreColor(_product1!.computedEcoScore),
-                        color2: EcoScoreBadge.ecoScoreColor(_product2!.computedEcoScore),
-                        winner: _compareNutriScore(_product1!.computedEcoScore, _product2!.computedEcoScore),
-                      ).animate().fadeIn(delay: 200.ms),
-                      _CompareRow(
-                        label: 'NOVA',
-                        value1: '${_product1!.novaGroup ?? '?'}',
-                        value2: '${_product2!.novaGroup ?? '?'}',
-                        winner: _compareInt(_product1!.novaGroup, _product2!.novaGroup, higher: false),
-                      ).animate().fadeIn(delay: 250.ms),
-                      _CompareRow(
-                        label: 'Calories',
-                        value1: '${_product1!.calories?.toStringAsFixed(0) ?? '-'} kcal',
-                        value2: '${_product2!.calories?.toStringAsFixed(0) ?? '-'} kcal',
-                        winner: _compareDouble(_product1!.calories, _product2!.calories, higher: false),
-                      ).animate().fadeIn(delay: 300.ms),
-                      _CompareRow(
-                        label: 'Sucres',
-                        value1: '${_product1!.sugars?.toStringAsFixed(1) ?? '-'} g',
-                        value2: '${_product2!.sugars?.toStringAsFixed(1) ?? '-'} g',
-                        winner: _compareDouble(_product1!.sugars, _product2!.sugars, higher: false),
-                      ).animate().fadeIn(delay: 350.ms),
-                      _CompareRow(
-                        label: 'Graisses sat.',
-                        value1: '${_product1!.saturatedFat?.toStringAsFixed(1) ?? '-'} g',
-                        value2: '${_product2!.saturatedFat?.toStringAsFixed(1) ?? '-'} g',
-                        winner: _compareDouble(_product1!.saturatedFat, _product2!.saturatedFat, higher: false),
-                      ).animate().fadeIn(delay: 400.ms),
-                      _CompareRow(
-                        label: 'Sel',
-                        value1: '${_product1!.salt?.toStringAsFixed(2) ?? '-'} g',
-                        value2: '${_product2!.salt?.toStringAsFixed(2) ?? '-'} g',
-                        winner: _compareDouble(_product1!.salt, _product2!.salt, higher: false),
-                      ).animate().fadeIn(delay: 450.ms),
-                      _CompareRow(
-                        label: 'Fibres',
-                        value1: '${_product1!.fiber?.toStringAsFixed(1) ?? '-'} g',
-                        value2: '${_product2!.fiber?.toStringAsFixed(1) ?? '-'} g',
-                        winner: _compareDouble(_product1!.fiber, _product2!.fiber, higher: true),
-                      ).animate().fadeIn(delay: 500.ms),
-                      _CompareRow(
-                        label: 'Protéines',
-                        value1: '${_product1!.proteins?.toStringAsFixed(1) ?? '-'} g',
-                        value2: '${_product2!.proteins?.toStringAsFixed(1) ?? '-'} g',
-                        winner: _compareDouble(_product1!.proteins, _product2!.proteins, higher: true),
-                      ).animate().fadeIn(delay: 550.ms),
-                      _CompareRow(
-                        label: 'Additifs',
-                        value1: '${_product1!.parsedAdditives.length}',
-                        value2: '${_product2!.parsedAdditives.length}',
-                        winner: _compareInt(
-                          _product1!.parsedAdditives.length,
-                          _product2!.parsedAdditives.length,
-                          higher: false,
-                        ),
-                      ).animate().fadeIn(delay: 600.ms),
-
-                      const SizedBox(height: 24),
-
-                      // Verdict
-                      _buildVerdict().animate().fadeIn(delay: 700.ms).scale(begin: const Offset(0.9, 0.9)),
-                    ],
-                  ),
-                ),
-    );
-  }
-
-  Widget _buildVerdict() {
-    if (_product1 == null || _product2 == null) return const SizedBox();
-
-    final score1 = _product1!.healthScore ?? 0;
-    final score2 = _product2!.healthScore ?? 0;
-    final winner = score1 >= score2 ? _product1! : _product2!;
-    final diff = (score1 - score2).abs();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.healthScoreColor(winner.healthScore),
-            AppTheme.healthScoreColor(winner.healthScore).withValues(alpha: 0.7),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.emoji_events_rounded, color: Colors.white, size: 36),
-          const SizedBox(height: 8),
-          Text(
-            score1 == score2 ? 'Match nul !' : 'Meilleur choix',
-            style: GoogleFonts.inter(fontSize: 14, color: Colors.white.withValues(alpha: 0.8)),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            score1 == score2 ? 'Les deux produits sont équivalents' : winner.name,
-            style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white),
-            textAlign: TextAlign.center,
-          ),
-          if (diff > 0) ...[
-            const SizedBox(height: 4),
-            Text(
-              '+$diff points de score santé',
-              style: GoogleFonts.inter(fontSize: 14, color: Colors.white.withValues(alpha: 0.9)),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  // 0=tie, 1=product1 wins, 2=product2 wins
-  int _compareInt(int? v1, int? v2, {required bool higher}) {
-    if (v1 == null || v2 == null) return 0;
-    if (v1 == v2) return 0;
-    return higher ? (v1 > v2 ? 1 : 2) : (v1 < v2 ? 1 : 2);
-  }
-
-  int _compareDouble(double? v1, double? v2, {required bool higher}) {
-    if (v1 == null || v2 == null) return 0;
-    if ((v1 - v2).abs() < 0.01) return 0;
-    return higher ? (v1 > v2 ? 1 : 2) : (v1 < v2 ? 1 : 2);
-  }
-
-  int _compareNutriScore(String? s1, String? s2) {
-    if (s1 == null || s2 == null) return 0;
-    final order = ['A', 'B', 'C', 'D', 'E'];
-    final i1 = order.indexOf(s1.toUpperCase());
-    final i2 = order.indexOf(s2.toUpperCase());
-    if (i1 == i2) return 0;
-    return i1 < i2 ? 1 : 2;
-  }
-}
-
-// ==================== COMPARE PRODUCT HEADER ====================
-class _CompareProductHeader extends StatelessWidget {
-  final Product product;
-
-  const _CompareProductHeader({required this.product});
-
-  @override
-  Widget build(BuildContext context) {
-    final scoreColor = AppTheme.healthScoreColor(product.healthScore);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 2))],
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 56, height: 56,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [scoreColor, scoreColor.withValues(alpha: 0.7)]),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text('${product.healthScore ?? '?'}', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white)),
-          ),
-          const SizedBox(height: 10),
-          Text(product.name, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 4),
-          Text(product.brand ?? '', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary), maxLines: 1),
-          const SizedBox(height: 8),
-          NutriScoreBadge(score: product.nutriScore, size: 20),
-        ],
-      ),
-    );
-  }
-}
-
-// ==================== COMPARE ROW ====================
-class _CompareRow extends StatelessWidget {
-  final String label;
-  final String value1;
-  final String value2;
-  final Color? color1;
-  final Color? color2;
-  final int winner; // 0=tie, 1=left, 2=right
-
-  const _CompareRow({
-    required this.label,
-    required this.value1,
-    required this.value2,
-    this.color1,
-    this.color2,
-    this.winner = 0,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          // Value 1
-          Expanded(
-            child: Row(
-              children: [
-                if (winner == 1)
-                  Container(
-                    width: 6, height: 6,
-                    margin: const EdgeInsets.only(right: 6),
-                    decoration: const BoxDecoration(color: AppTheme.nutriA, shape: BoxShape.circle),
-                  ),
-                Expanded(
-                  child: Text(
-                    value1,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: winner == 1 ? FontWeight.w700 : FontWeight.w500,
-                      color: color1 ?? (winner == 1 ? AppTheme.nutriA : AppTheme.textPrimary),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Label
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(8)),
-            child: Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
-          ),
-          // Value 2
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Text(
-                    value2,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: winner == 2 ? FontWeight.w700 : FontWeight.w500,
-                      color: color2 ?? (winner == 2 ? AppTheme.nutriA : AppTheme.textPrimary),
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
-                ),
-                if (winner == 2)
-                  Container(
-                    width: 6, height: 6,
-                    margin: const EdgeInsets.only(left: 6),
-                    decoration: const BoxDecoration(color: AppTheme.nutriA, shape: BoxShape.circle),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

@@ -10,9 +10,9 @@ import '../services/remote_config_service.dart';
 import '../services/tracking_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
-import '../providers/review_provider.dart';
 import '../screens/shopping_list_screen.dart';
 import '../screens/compare_screen.dart';
+import '../screens/my_reviews_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -245,12 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _MenuItem(
               icon: Icons.rate_review_outlined, label: 'Mes avis',
               subtitle: 'Voir mes avis publiés', color: AppTheme.accent,
-              onTap: () {
-                context.read<ReviewProvider>().loadMyReviews();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Mes avis chargés'), backgroundColor: Color(0xFF1B5E20)),
-                );
-              },
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyReviewsScreen())),
             ).animate().fadeIn(delay: 458.ms).slideX(begin: 0.03),
 
             const SizedBox(height: 8),
