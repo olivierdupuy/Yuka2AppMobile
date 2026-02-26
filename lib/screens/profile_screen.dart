@@ -6,6 +6,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
+import '../services/remote_config_service.dart';
 import '../services/tracking_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
@@ -208,7 +209,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ).animate().fadeIn(delay: 460.ms).slideX(begin: 0.03),
 
             // Biometric toggle
-            if (_biometricAvailable)
+            if (_biometricAvailable && RemoteConfigService.instance.config.biometricAuthEnabled)
               Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
@@ -278,6 +279,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 10),
 
             // Delete account
+            if (RemoteConfigService.instance.config.accountDeletionEnabled)
             TextButton(
               onPressed: () => _showDeleteAccountDialog(context),
               child: Text('Supprimer mon compte', style: GoogleFonts.inter(fontSize: 13, color: Colors.grey, decoration: TextDecoration.underline)),

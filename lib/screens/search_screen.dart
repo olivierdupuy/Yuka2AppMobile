@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../providers/product_provider.dart';
+import '../services/remote_config_service.dart';
 import '../services/tracking_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/product_card.dart';
@@ -160,6 +161,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 ).animate().fadeIn(delay: 200.ms),
                 const SizedBox(height: 12),
                 // Toggle Open Food Facts
+                if (RemoteConfigService.instance.config.openFoodFactsEnabled)
                 GestureDetector(
                   onTap: () {
                     HapticFeedback.selectionClick();
@@ -235,20 +237,19 @@ class _SearchScreenState extends State<SearchScreen> {
           // Results
           Expanded(
             child: provider.isLoading
-                ? Padding(
+                ? ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Column(
-                      children: List.generate(5, (i) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5),
-                        child: Shimmer.fromColors(
-                          baseColor: Colors.grey.shade200,
-                          highlightColor: Colors.grey.shade50,
-                          child: Container(
-                            height: 90,
-                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-                          ),
+                    itemCount: 5,
+                    itemBuilder: (context, i) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      child: Shimmer.fromColors(
+                        baseColor: Colors.grey.shade200,
+                        highlightColor: Colors.grey.shade50,
+                        child: Container(
+                          height: 90,
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
                         ),
-                      )),
+                      ),
                     ),
                   )
                 : provider.products.isEmpty

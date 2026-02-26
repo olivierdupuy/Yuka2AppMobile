@@ -13,6 +13,11 @@ class RemoteConfig {
   final bool searchEnabled;
   final bool favoritesEnabled;
   final bool registrationEnabled;
+  final bool historyEnabled;
+  final bool openFoodFactsEnabled;
+  final bool biometricAuthEnabled;
+  final bool accountDeletionEnabled;
+  final bool passwordResetEnabled;
 
   const RemoteConfig({
     this.maintenanceMode = false,
@@ -24,6 +29,11 @@ class RemoteConfig {
     this.searchEnabled = true,
     this.favoritesEnabled = true,
     this.registrationEnabled = true,
+    this.historyEnabled = true,
+    this.openFoodFactsEnabled = true,
+    this.biometricAuthEnabled = true,
+    this.accountDeletionEnabled = true,
+    this.passwordResetEnabled = true,
   });
 
   factory RemoteConfig.fromJson(Map<String, dynamic> json) {
@@ -37,6 +47,11 @@ class RemoteConfig {
       searchEnabled: json['searchEnabled'] as bool? ?? true,
       favoritesEnabled: json['favoritesEnabled'] as bool? ?? true,
       registrationEnabled: json['registrationEnabled'] as bool? ?? true,
+      historyEnabled: json['historyEnabled'] as bool? ?? true,
+      openFoodFactsEnabled: json['openFoodFactsEnabled'] as bool? ?? true,
+      biometricAuthEnabled: json['biometricAuthEnabled'] as bool? ?? true,
+      accountDeletionEnabled: json['accountDeletionEnabled'] as bool? ?? true,
+      passwordResetEnabled: json['passwordResetEnabled'] as bool? ?? true,
     );
   }
 
@@ -72,6 +87,17 @@ class RemoteConfigService {
   RemoteConfig _config = const RemoteConfig();
   RemoteConfig get config => _config;
 
+  /// Listeners notified whenever the config changes.
+  final List<void Function(RemoteConfig)> _listeners = [];
+
+  void addListener(void Function(RemoteConfig) listener) {
+    _listeners.add(listener);
+  }
+
+  void removeListener(void Function(RemoteConfig) listener) {
+    _listeners.remove(listener);
+  }
+
   /// Fetch the remote configuration from the backend.
   Future<RemoteConfig> fetchConfig() async {
     try {
@@ -82,7 +108,15 @@ class RemoteConfigService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        _config = RemoteConfig.fromJson(data);
+        final newConfig = RemoteConfig.fromJson(data);
+        final changed = newConfig.maintenanceMode != _config.maintenanceMode ||
+            newConfig.requiresUpdate != _config.requiresUpdate;
+        _config = newConfig;
+        if (changed) {
+          for (final listener in _listeners) {
+            listener(_config);
+          }
+        }
       }
     } catch (e) {
       debugPrint('RemoteConfig fetch failed: $e');

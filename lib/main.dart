@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -34,32 +35,46 @@ class Yuka2App extends StatefulWidget {
 class _Yuka2AppState extends State<Yuka2App> with WidgetsBindingObserver {
   bool _configLoaded = false;
   BlockingReason? _blockingReason;
+  Timer? _configTimer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    RemoteConfigService.instance.addListener(_onConfigChanged);
     _checkRemoteConfig();
+    // Vérification périodique toutes les 30 secondes
+    _configTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => RemoteConfigService.instance.fetchConfig(),
+    );
   }
 
   @override
   void dispose() {
+    _configTimer?.cancel();
+    RemoteConfigService.instance.removeListener(_onConfigChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
+  void _onConfigChanged(RemoteConfig config) {
+    final reason = _reasonFromConfig(config);
+    if (reason != _blockingReason) {
+      setState(() => _blockingReason = reason);
+    }
+  }
+
+  BlockingReason? _reasonFromConfig(RemoteConfig config) {
+    if (config.maintenanceMode) return BlockingReason.maintenance;
+    if (config.requiresUpdate) return BlockingReason.forceUpdate;
+    return null;
+  }
+
   Future<void> _checkRemoteConfig() async {
     final config = await RemoteConfigService.instance.fetchConfig();
-
-    BlockingReason? reason;
-    if (config.maintenanceMode) {
-      reason = BlockingReason.maintenance;
-    } else if (config.requiresUpdate) {
-      reason = BlockingReason.forceUpdate;
-    }
-
     setState(() {
-      _blockingReason = reason;
+      _blockingReason = _reasonFromConfig(config);
       _configLoaded = true;
     });
   }
@@ -97,28 +112,31 @@ class _Yuka2AppState extends State<Yuka2App> with WidgetsBindingObserver {
         title: 'Yuka2',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: _buildHome(),
+        home: _configLoaded ? const HomeScreen() : const _LoadingScreen(),
+        builder: (context, child) {
+          // Affiche l'écran de maintenance PAR-DESSUS toute la navigation
+          if (_blockingReason != null) {
+            return MaintenanceScreen(
+              reason: _blockingReason!,
+              onRetry: _checkRemoteConfig,
+            );
+          }
+          return child!;
+        },
       ),
     );
   }
+}
 
-  Widget _buildHome() {
-    if (!_configLoaded) {
-      // Show a simple loading while checking config
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: Color(0xFF1B5E20)),
-        ),
-      );
-    }
+class _LoadingScreen extends StatelessWidget {
+  const _LoadingScreen();
 
-    if (_blockingReason != null) {
-      return MaintenanceScreen(
-        reason: _blockingReason!,
-        onRetry: _checkRemoteConfig,
-      );
-    }
-
-    return const HomeScreen();
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(color: Color(0xFF1B5E20)),
+      ),
+    );
   }
 }

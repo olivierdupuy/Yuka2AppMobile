@@ -58,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         _biometricAvailable = canCheck && isSupported;
         _biometricEnabled = enabled && (hasBioToken || hasToken);
       });
-      if (_biometricEnabled && !_isRegister) {
+      if (_biometricEnabled && !_isRegister && RemoteConfigService.instance.config.biometricAuthEnabled) {
         _authenticateWithBiometric();
       }
     } catch (_) {}
@@ -463,7 +463,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     ],
 
                     // Forgot password link
-                    if (!_isRegister)
+                    if (!_isRegister && RemoteConfigService.instance.config.passwordResetEnabled)
                       Align(
                         alignment: Alignment.centerRight,
                         child: GestureDetector(
@@ -504,7 +504,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.1),
 
                   // Biometric
-                  if (!_isRegister && !_isForgotPassword && _biometricAvailable && _biometricEnabled) ...[
+                  if (!_isRegister && !_isForgotPassword && _biometricAvailable && _biometricEnabled && RemoteConfigService.instance.config.biometricAuthEnabled) ...[
                     const SizedBox(height: 20),
                     Row(
                       children: [

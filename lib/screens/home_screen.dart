@@ -104,7 +104,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 28),
                   ),
                 ),
-                _NavItem(icon: Icons.history_rounded, label: 'Historique', isActive: _currentIndex == 3, onTap: () => setState(() => _currentIndex = 3)),
+                _NavItem(icon: Icons.history_rounded, label: 'Historique', isActive: _currentIndex == 3, onTap: () {
+                  final config = RemoteConfigService.instance.config;
+                  if (!config.historyEnabled) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('L\'historique est temporairement désactivé')),
+                    );
+                    return;
+                  }
+                  setState(() => _currentIndex = 3);
+                }),
                 _NavItem(icon: Icons.person_rounded, label: 'Profil', isActive: _currentIndex == 4, onTap: () => setState(() => _currentIndex = 4)),
               ],
             ),
