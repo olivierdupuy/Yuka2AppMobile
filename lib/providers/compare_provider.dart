@@ -71,6 +71,8 @@ class CompareProvider extends ChangeNotifier {
         _isLoading = false;
         notifyListeners();
         return true;
+      } else {
+        _error = 'Connectez-vous pour comparer des produits';
       }
     } catch (e) {
       _error = 'Erreur lors de la comparaison';
