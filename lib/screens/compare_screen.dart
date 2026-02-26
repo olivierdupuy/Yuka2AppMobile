@@ -42,6 +42,24 @@ class _CompareScreenState extends State<CompareScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
+          if (compare.error != null) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 12),
+                  Text(compare.error!),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () => compare.compare(),
+                    child: const Text('Réessayer'),
+                  ),
+                ],
+              ),
+            );
+          }
+
           if (compare.comparedProducts.isEmpty) {
             return const Center(
               child: Text('Sélectionnez au moins 2 produits à comparer'),

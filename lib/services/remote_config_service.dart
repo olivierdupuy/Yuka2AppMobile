@@ -81,7 +81,7 @@ class RemoteConfigService {
   RemoteConfigService._();
   static final RemoteConfigService instance = RemoteConfigService._();
 
-  static const String _baseUrl = 'http://192.168.1.30:5000/api';
+  static const String _baseUrl = 'http://localhost:5000/api';
   static const String appVersion = '1.0.0';
 
   RemoteConfig _config = const RemoteConfig();

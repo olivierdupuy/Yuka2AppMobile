@@ -9,7 +9,7 @@ class TrackingService {
   static final TrackingService _instance = TrackingService._();
   static TrackingService get instance => _instance;
 
-  static const String _baseUrl = 'http://192.168.1.30:5000/api';
+  static const String _baseUrl = 'http://localhost:5000/api';
   static const String _deviceIdKey = 'tracking_device_id';
 
   String? _deviceId;
